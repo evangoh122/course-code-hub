@@ -6,7 +6,6 @@ Full code for LLMOps with Datarbricks Course
 - [Lecture notes in HTML](lecture_materials/lecture4.html) — download and open in a browser.
 - [Lecture notes in PDF](lecture_materials/lecture4-materials.pdf)
 - [Lecture slides in PDF](presentations/lecture4.pdf)
-- [Editable PowerPoint with speaker notes](presentations/lecture4.pptx)
 - [Browser presentation with speaker notes](presentation_prep/lecture4/lecture4.html)
 
 Lecture 4 covers MLflow components, workspace and Unity Catalog storage, sensitive
