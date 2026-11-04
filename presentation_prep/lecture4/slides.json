@@ -36,16 +36,6 @@
         "05",
         "Tracking and registration",
         "Prepare an agent for Model Serving"
-      ],
-      [
-        "06",
-        "Production observability",
-        "Understand failures and prevent regressions"
-      ],
-      [
-        "07",
-        "Homework",
-        "Trace, evaluate and explain"
       ]
     ],
     "notes": ""

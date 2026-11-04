@@ -18,7 +18,7 @@ const hints={
 };
 export function layout(n,s){
  if(hints[n])return code(s,hints[n]);
- if(s.kind==='divider')return `<div class="section-heading"><span class="section-number">${s.part||'?'}</span><h1>${e(s.title)}</h1><p>${e(s.subtitle)}</p></div>`;
+ if(s.kind==='divider')return `<div class="section-heading"><h1>${e(s.title)}</h1></div>`;
  if(n==='agenda')return `<div class="agenda-list">${s.rows.map(r=>`<article><span>${r[0]}</span><div><h3>${e(r[1])}</h3><p>${e(r[2])}</p></div></article>`).join('')}</div>`;
  switch(n){
  case 'flavors':return `<div class="flavor-columns"><article><h3>Classic ML</h3><div class="flavor-family"><p>sklearn · statsmodels<br>pytorch · catboost<br>spacy · lightgbm<br>xgboost · tensorflow</p></div><div class="flavor-custom"><span>Custom</span><code>pyfunc.PythonModel</code></div><div class="flavor-payload"><span>REQUEST ALTERNATIVES</span><pre><code>{"dataframe_split": {
