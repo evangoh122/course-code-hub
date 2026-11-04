@@ -297,7 +297,7 @@ class ToolRegistry:
     def register(self, tool: ToolInfo) -> None:
         """Register a tool."""
         self._tools[tool.name] = tool
-        logger.info(f"✓ Registered tool: {tool.name}")
+        logger.info(f"Registered tool: {tool.name}")
     
     def get_tool(self, name: str) -> ToolInfo:
         """Get a tool by name."""
@@ -432,10 +432,10 @@ def test_tool(tool_name: str, test_cases: list[dict]):
         
         try:
             result = registry.execute(tool_name, test_case)
-            logger.info(f"  ✓ Success")
+            logger.info(f"  Success")
             logger.info(f"  Result: {str(result)[:100]}...")
         except Exception as e:
-            logger.error(f"  ✗ Error: {e}")
+            logger.error(f"  Error: {e}")
 
 # Test calculator
 test_tool("calculator", [
@@ -462,7 +462,7 @@ class SimpleAgent:
         self._tools_dict = {tool.name: tool for tool in tools}
         self._client = OpenAI(
             api_key=w.tokens.create(lifetime_seconds=1200).token_value,
-            base_url=f"{w.config.host.rstrip('/')}/ai-gateway/mlflow/v1"
+            base_url=f"{w.config.host}/ai-gateway/mlflow/v1"
         )
     
     def get_tool_specs(self) -> list[dict]:
@@ -551,7 +551,7 @@ agent = SimpleAgent(
 # system_prompt="You are a helpful assistant. Use the available tools to answer questions.", 
 # tools=registry.get_all_tools())
 
-logger.info("✓ Agent created with tools:")
+logger.info("Agent created with tools:")
 for tool_name in agent._tools_dict.keys():
     logger.info(f"  - {tool_name}")
 

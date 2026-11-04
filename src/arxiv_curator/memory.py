@@ -17,9 +17,11 @@ class LakebaseMemory:
         self,
         project_id: str,
         workspace: WorkspaceClient | None = None,
+        database_user: str | None = None,
     ) -> None:
         self.project_id = project_id
         self.workspace = workspace
+        self.database_user = database_user
         self._pool: ConnectionPool | None = None
 
     def _get_connection_string(self) -> str:
@@ -54,8 +56,8 @@ class LakebaseMemory:
         if client_id:
             username = client_id
         else:
-            user = w.current_user.me()
-            username = urllib.parse.quote_plus(user.user_name)
+            username = self.database_user or w.current_user.me().user_name
+        username = urllib.parse.quote(username, safe="")
 
         # Apps expose the selected Lakebase endpoint and host as resources.
         endpoint_name = os.environ.get("LAKEBASE_ENDPOINT")

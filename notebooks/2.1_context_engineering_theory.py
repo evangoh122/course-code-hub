@@ -162,7 +162,7 @@ databricks_token = w.tokens.create(lifetime_seconds=1200).token_value
 
 client = OpenAI(
     api_key=databricks_token,
-    base_url=f"{w.config.host.rstrip('/')}/ai-gateway/mlflow/v1",
+    base_url=f"{w.config.host}/ai-gateway/mlflow/v1",
 )
 
 MODEL_NAME = cfg.llm_endpoint

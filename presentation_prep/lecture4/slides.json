@@ -1,0 +1,794 @@
+[
+  {
+    "title": "MLflow for GenAI",
+    "rows": [],
+    "kind": "cover",
+    "subtitle": "Tracing, evaluation and observability",
+    "notes": "Lecture 4. We build on the arXiv agent from lecture 3. Today focuses on tracing. Experiment tracking and model registration prepare the Model Serving demonstration next week.",
+    "layout_id": 1
+  },
+  {
+    "title": "Agenda",
+    "kind": "agenda",
+    "layout_id": "agenda",
+    "rows": [
+      [
+        "01",
+        "MLflow components",
+        "Tracking, registry and tracing"
+      ],
+      [
+        "02",
+        "Storage and governance",
+        "Regular ML, GenAI and Unity Catalog"
+      ],
+      [
+        "03",
+        "Traces and spans",
+        "Inspect and instrument agent execution"
+      ],
+      [
+        "04",
+        "Evaluation",
+        "Test behavior, define scorers and inspect failures"
+      ],
+      [
+        "05",
+        "Tracking and registration",
+        "Prepare an agent for Model Serving"
+      ],
+      [
+        "06",
+        "Production observability",
+        "Understand failures and prevent regressions"
+      ],
+      [
+        "07",
+        "Homework",
+        "Trace, evaluate and explain"
+      ]
+    ],
+    "notes": ""
+  },
+  {
+    "title": "MLflow components",
+    "subtitle": "Tracking, registry and tracing",
+    "kind": "divider",
+    "layout_id": "section",
+    "part": "01",
+    "notes": ""
+  },
+  {
+    "title": "MLflow components",
+    "rows": [
+      [
+        "Experiment tracking",
+        "Main use: machine learning. Compare training runs, parameters, metrics and artifacts."
+      ],
+      [
+        "Model registry",
+        "Manage model versions and aliases in Unity Catalog. Share models across workspaces."
+      ],
+      [
+        "MLflow tracing",
+        "Understand what happens inside an agent. OpenTelemetry-compatible and closely tied to evaluation."
+      ]
+    ],
+    "bottom": "For an agent behind a Model Serving endpoint, also log the agent and register a model version.",
+    "notes": "A run records an experiment execution or evaluation. A trace records a request and its spans. A registered model version identifies an artifact for reuse or deployment. These objects are related but have different purposes. MLflow tracing was introduced in MLflow 2.14.0 in June 2024. For the Model Serving workflow demonstrated next week, log the agent in an MLflow run and register it in Unity Catalog. Databricks Apps remains our recommended application route.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/mlflow/experiments",
+      "https://docs.databricks.com/aws/en/machine-learning/manage-model-lifecycle/",
+      "https://mlflow.org/docs/latest/genai/tracing/",
+      "https://www.mlflow.org/releases/2.14.0/",
+      "https://mlflow.org/docs/latest/llms/tracing/"
+    ],
+    "layout_id": 2,
+    "section": "MLFLOW COMPONENTS"
+  },
+  {
+    "title": "LLM observability tools also support evaluation",
+    "rows": [],
+    "kind": "table",
+    "table": [
+      [
+        "Tool / ecosystem",
+        "Observability",
+        "Evaluation"
+      ],
+      [
+        "Pydantic Logfire + pydantic-evals",
+        "Yes",
+        "Yes"
+      ],
+      [
+        "MLflow",
+        "Yes",
+        "Yes"
+      ],
+      [
+        "Arize Phoenix",
+        "Yes",
+        "Yes"
+      ],
+      [
+        "Opik (Comet)",
+        "Yes",
+        "Yes"
+      ],
+      [
+        "Langfuse",
+        "Yes",
+        "Yes"
+      ]
+    ],
+    "bottom": "This comparison maps to MLflow tracing and evaluation.",
+    "notes": "This capability overview covers observability and evaluation, not feature parity. MLflow also provides experiment tracking and a model registry. Human review and feedback are supported by MLflow, Phoenix and Opik. Langfuse also provides tracing, evaluation and human annotation.",
+    "sources": [
+      "https://langfuse.com/docs/evaluation/overview",
+      "https://langfuse.com/docs/evaluation/evaluation-methods/annotation-queues"
+    ],
+    "layout_id": 3,
+    "section": "MLFLOW COMPONENTS"
+  },
+  {
+    "title": "Model flavors and payloads",
+    "layout_id": "flavors",
+    "section": "MLFLOW COMPONENTS",
+    "rows": [],
+    "notes": "Framework flavors package models; the deployed interface and model signature determine request and response schemas. ResponsesAgent uses a Responses-style schema, not a guarantee that every OpenAI Responses API feature is supported. DSPy and LangChain do not universally imply a chat payload. Transformers deployment depends on supported model families and architectures. Foundation model endpoint tasks include chat, embeddings and completions where supported. Tensor payloads use instances or inputs. The classic ML payload examples are alternatives, not one combined request. For Databricks, invoke the workspace serving endpoint; the OpenAI public API URL is not the deployment destination. Redrawn from the user-provided model flavors and payload visual.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/machine-learning/model-serving/score-custom-model-endpoints",
+      "https://mlflow.org/docs/latest/genai/serving/responses-agent/",
+      "https://docs.databricks.com/api/model-serving-query/v1",
+      "https://www.mlflow.org/docs/latest/api_reference/python_api/mlflow.langchain.html"
+    ]
+  },
+  {
+    "title": "Storage and governance",
+    "subtitle": "Regular ML, GenAI and Unity Catalog",
+    "kind": "divider",
+    "layout_id": "section",
+    "part": "02",
+    "notes": ""
+  },
+  {
+    "title": "Regular ML and GenAI experiments",
+    "rows": [],
+    "kind": "table",
+    "table": [
+      [
+        "Workflow",
+        "Experiments and data",
+        "Registered artifacts"
+      ],
+      [
+        "Regular ML",
+        "Workspace experiments: training runs, parameters and metrics",
+        "Registered models in Unity Catalog"
+      ],
+      [
+        "GenAI",
+        "Experiments organize traces and evaluations; trace data can be stored in Unity Catalog",
+        "For Model Serving: log and register the agent in Unity Catalog"
+      ]
+    ],
+    "bottom": "Model Serving is the overlap: log the agent in an MLflow run, then register it in Unity Catalog.",
+    "notes": "Compare experiment use cases: regular ML training versus GenAI tracing and evaluation. These are workflows, not two separate underlying experiment object types. Experiment metadata is workspace scoped; UC-backed GenAI trace payloads use governed tables. In our regular ML setup, registered models are in UC. Agent deployment through Model Serving also uses an MLflow run and a UC registered model version. Experiment artifact storage can separately use a UC volume. Databricks Apps is our recommended course application route.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/mlflow/experiments",
+      "https://docs.databricks.com/aws/en/mlflow3/genai/tracing/trace-unity-catalog",
+      "https://docs.databricks.com/aws/en/machine-learning/manage-model-lifecycle/"
+    ],
+    "layout_id": 5,
+    "section": "STORAGE AND GOVERNANCE"
+  },
+  {
+    "title": "Why GenAI changes the data sensitivity",
+    "rows": [
+      [
+        "Traditional ML runs",
+        "Often log aggregate metrics and parameters. These can reveal less than the original training records."
+      ],
+      [
+        "GenAI traces",
+        "Can capture full user queries, responses, retrieved documents and tool arguments."
+      ],
+      [
+        "A second copy of business data",
+        "Someone who can read the trace may see content from a protected source."
+      ]
+    ],
+    "bottom": "ML artifacts, samples and logged inputs can also contain sensitive data.",
+    "notes": "The distinction is typical content, not a guarantee that traditional ML tracking is safe. Do not log secrets. Consider what inputs and outputs instrumentation captures, and minimize unnecessary payloads. This privacy motivation is the additional rationale requested for the lecture.",
+    "layout_id": 6,
+    "section": "STORAGE AND GOVERNANCE"
+  },
+  {
+    "title": "Workspace administration and trace access",
+    "rows": [
+      [
+        "Workspace-managed traces",
+        "Workspace admins can manage experiment permissions and potentially read sensitive trace contents."
+      ],
+      [
+        "UC-backed traces",
+        "Trace access follows UC data privileges. We can give application teams access to their own trace data."
+      ],
+      [
+        "Ownership matters",
+        "Use a governed catalog with deliberate ownership and grants. UC does not automatically exclude every administrator."
+      ]
+    ],
+    "bottom": "A workspace admin may also hold UC privileges or be able to grant access.",
+    "notes": "Workspace admins have CAN MANAGE on workspace objects. For UC, review catalog ownership, inherited grants and privileged roles. Workspace admins are default owners of an automatically provisioned workspace catalog and can grant themselves data access there. A separate governed catalog can support the desired separation. This is an access-control boundary, not a promise against all powerful administrators.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/security/auth/access-control",
+      "https://docs.databricks.com/aws/en/data-governance/unity-catalog/manage-privileges/admin-privileges",
+      "https://docs.databricks.com/aws/en/mlflow3/genai/tracing/trace-unity-catalog"
+    ],
+    "layout_id": 7,
+    "section": "STORAGE AND GOVERNANCE"
+  },
+  {
+    "title": "Registered models in Unity Catalog",
+    "rows": [
+      [
+        "One governed model name",
+        "catalog.schema.arxiv_agent holds versions of the logged agent artifact."
+      ],
+      [
+        "Reuse across workspaces",
+        "Authorized users can access the model from workspaces attached to the same metastore, subject to catalog bindings."
+      ],
+      [
+        "Prepare a serving deployment",
+        "Choose an explicit version for deployment. An alias is a movable reference to a version."
+      ]
+    ],
+    "bottom": "Model registration and trace storage are separate UC concerns.",
+    "notes": "Model access requires the relevant privileges. Workspace-catalog bindings can further restrict access. Registering an agent does not deploy an endpoint or grant the agent access to its dependencies.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/machine-learning/manage-model-lifecycle/",
+      "https://docs.databricks.com/aws/en/data-governance/unity-catalog/access-control/workspace-catalog-binding"
+    ],
+    "layout_id": 9,
+    "section": "STORAGE AND GOVERNANCE"
+  },
+  {
+    "title": "Traces and spans",
+    "rows": [],
+    "kind": "divider",
+    "subtitle": "Inspect and instrument agent execution",
+    "notes": "",
+    "layout_id": 10,
+    "part": "03",
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "A trace records one execution",
+    "rows": [
+      [
+        "Trace",
+        "The request-level record, including status, duration, identifiers and a collection of spans."
+      ],
+      [
+        "Span",
+        "One operation, with a start/end time, inputs, outputs and attributes."
+      ],
+      [
+        "Parent and child spans",
+        "Nested spans preserve the relationship between the agent, model calls and tools."
+      ]
+    ],
+    "bottom": "A conversation can contain multiple request traces linked by a session ID.",
+    "notes": "A span may represent an LLM call, retrieval or a tool invocation. The trace is the execution record, not a transcript alone. OpenTelemetry provides a common tracing model. Integration and payload details still matter when sending data to another backend.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/tracing/"
+    ],
+    "layout_id": 11,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "One request through the arXiv agent",
+    "rows": [],
+    "kind": "code",
+    "code": "predict_stream                         AGENT\n  call_and_run_tools                   CHAIN\n    memory_load                        RETRIEVER\n    LLM call                           LLM\n    execute_tool                       TOOL\n      search_papers                    retrieval work\n    LLM call                           LLM\n    memory_save                        CHAIN",
+    "bottom": "Illustrative hierarchy. Actual spans depend on the executed path and integrations.",
+    "notes": "Based on src/arxiv_curator/agent.py. The current source uses RETRIEVER for memory_load, CHAIN for memory_save and TOOL for execute_tool. LLM spans require the appropriate instrumentation. Do not claim this is a captured production trace. Use the live demo to show the exact span tree.",
+    "layout_id": 12,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "What a trace helps us investigate",
+    "rows": [
+      [
+        "Slow response",
+        "Which span dominates the request? Is the agent making repeated tool calls?"
+      ],
+      [
+        "Poor answer",
+        "What did retrieval return? What did the model receive? Did memory load the expected history?"
+      ],
+      [
+        "Unexpected cost",
+        "How many model calls ran? Where available, compare token usage by span and version."
+      ]
+    ],
+    "bottom": "A successful trace status describes execution, not answer quality.",
+    "notes": "Span durations can overlap, so summing child durations is not always equal to request latency. Token and cost data depend on instrumentation and model support. Separate evidence from hypotheses during debugging.",
+    "layout_id": 13,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "Instrumentation choices",
+    "rows": [
+      [
+        "Automatic instrumentation",
+        "Use the integration for your model or framework to capture supported operations."
+      ],
+      [
+        "@mlflow.trace",
+        "Instrument your own functions and choose meaningful span names and types."
+      ],
+      [
+        "mlflow.start_span",
+        "Control the scope of a span and explicitly record inputs or outputs."
+      ]
+    ],
+    "notes": "Notebook 4.1 introduces decorators and manual spans. OpenTelemetry compatibility does not mean all frameworks record identical attributes or all backends accept every field. Avoid logging credentials in arguments or metadata.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/tracing/"
+    ],
+    "layout_id": 14,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "UC trace setup",
+    "rows": [],
+    "kind": "code",
+    "code": "from mlflow.entities.trace_location import UnityCatalog\n\nexperiment = mlflow.set_experiment(\n    experiment_name=cfg.experiment_name,\n    trace_location=UnityCatalog(\n        catalog_name=cfg.catalog,\n        schema_name=cfg.schema,\n        table_prefix=\"llmops\",\n    ),\n)",
+    "bottom": "Notebook 4.0 verifies existing bindings and configures the application principal.",
+    "notes": "Excerpt from notebooks/4.0.uc_traces_setup.py. Run the full notebook: it sets the warehouse ID, checks existing experiment bindings and grants access. The catalog and schema must already exist. The current docs require MLflow 3.14 or later for this UC workflow. Do not interpret this excerpt as all required setup.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/mlflow3/genai/tracing/trace-unity-catalog"
+    ],
+    "layout_id": 15,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "Permissions and deployment checks",
+    "rows": [
+      [
+        "Human reader and application writer",
+        "Give each identity the privileges needed for its task. Check inherited access as well as direct grants."
+      ],
+      [
+        "Course setup",
+        "Notebook 4.0 grants the service principal SELECT and MODIFY on trace tables, and SELECT on views."
+      ],
+      [
+        "A real write and read",
+        "Generate a trace with the application identity, then verify that an intended reader can inspect it."
+      ]
+    ],
+    "bottom": "Experiment access alone does not grant access to UC trace payloads.",
+    "notes": "The course notebook assumes necessary parent USE CATALOG and USE SCHEMA grants already exist. Table-level SELECT, MODIFY and view SELECT grants do not grant these parent privileges. Use a dedicated trace destination where possible and review the notebook prefix-based object selection. Check SQL warehouse access for readers. Validate both allowed access and denied access for an unrelated user. No permissions are changed by these slides.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/mlflow3/genai/tracing/trace-unity-catalog"
+    ],
+    "layout_id": 16,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "A parent span and two child spans",
+    "rows": [],
+    "kind": "code",
+    "code": "@mlflow.trace(span_type=SpanType.CHAIN)\ndef process_query(user_query: str) -> str:\n    results = search_database(user_query)\n    prompt = f\"Question: {user_query}\\nResults: {results}\"\n    return call_llm(prompt)\n\n# search_database uses @mlflow.trace(span_type=SpanType.TOOL)\n# call_llm uses @mlflow.trace(span_type=SpanType.LLM)",
+    "bottom": "Notebook 4.1 starts with simulated operations so the span structure is easy to inspect.",
+    "notes": "Adapted from notebook 4.1. Imports and decorated child functions are defined earlier in the notebook. This excerpt illustrates nesting, not a complete application. A simulated LLM function is not a real model call.",
+    "layout_id": 17,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "Metadata connects requests to versions",
+    "rows": [],
+    "kind": "code",
+    "code": "mlflow.update_current_trace(\n    metadata={\n        \"mlflow.trace.session\": session_id,\n        \"environment\": env,\n    },\n    tags={\"git_sha\": git_sha, \"model_version\": version},\n    client_request_id=request_id,\n)",
+    "bottom": "Use real deployment identifiers. Avoid secrets and unnecessary personal data.",
+    "notes": "Adapted from notebook 4.1. Call within an active trace. request_id identifies one client request, session_id groups related turns, and git_sha/model_version identify implementation changes. Placeholder git SHAs in demonstrations must be replaced in real deployments.",
+    "layout_id": 18,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "Demo: inspect the agent execution",
+    "rows": [
+      [
+        "4.0 and 4.1",
+        "Verify the UC destination, generate a simple trace, then inspect nested spans and metadata."
+      ],
+      [
+        "4.2: the real agent",
+        "Ask for papers, then ask a follow-up using the same session ID."
+      ],
+      [
+        "Investigation",
+        "Find the memory load, tool call and final response. Explain which evidence supports the answer."
+      ]
+    ],
+    "bottom": "ResponsesAgent packages prediction behavior. Tracing shows what that behavior did.",
+    "notes": "Use notebooks/4.0.uc_traces_setup.py, 4.1.tracing_implementation.py and 4.2.custom_agent.py. Show src/arxiv_curator/agent.py only where it clarifies a span or prediction method. Keep tools and memory implementation brief because lecture 3 covered them. The user should be able to explain a trace, not memorize every agent method.",
+    "layout_id": 19,
+    "section": "TRACES AND SPANS"
+  },
+  {
+    "title": "Evaluation",
+    "rows": [],
+    "kind": "divider",
+    "subtitle": "Test behavior, define scorers and inspect failures",
+    "notes": "",
+    "layout_id": 20,
+    "part": "04",
+    "section": "EVALUATION AND OBSERVABILITY"
+  },
+  {
+    "title": "Evaluation data starts with expected behavior",
+    "rows": [
+      [
+        "Realistic tasks",
+        "Start with a small, reviewed set of normal requests and meaningful edge cases."
+      ],
+      [
+        "Context and expectations",
+        "Include prior turns or evidence when the task needs them. Record what a useful response must do."
+      ],
+      [
+        "Failure analysis",
+        "Group failures, refine the criteria with domain reviewers, and keep regression cases."
+      ]
+    ],
+    "bottom": "For arXiv: paper evidence, topic relevance, follow-up context and honest uncertainty.",
+    "notes": "For the exercise, consider starting with roughly 10–20 high-quality examples as a practical exercise, not a universal statistical requirement. Include absent evidence, unrelated requests and follow-up questions. A file with only questions is a starting point but does not encode per-example expectations. Keep a separate held-out set for comparing changes.",
+    "layout_id": 26,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "Metrics define what; scorers define how",
+    "rows": [],
+    "kind": "table",
+    "table": [
+      [
+        "Approach",
+        "Useful for",
+        "Limitation"
+      ],
+      [
+        "Code",
+        "Length, schema and explicit rules",
+        "Can miss contextual failure"
+      ],
+      [
+        "LLM judge",
+        "Relevance and nuanced criteria",
+        "Needs calibration and evidence"
+      ],
+      [
+        "Human review",
+        "Domain expectations and edge cases",
+        "Requires time and clear rubrics"
+      ]
+    ],
+    "bottom": "A metric is the quality dimension. A scorer produces its assessment.",
+    "notes": "Use multiple forms of evidence. Human disagreement can expose an ambiguous criterion rather than a model failure. Scorer outputs can be boolean, categorical or numeric.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/"
+    ],
+    "layout_id": 27,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "MLflow scorers: choosing the evidence",
+    "rows": [],
+    "kind": "table",
+    "table": [
+      [
+        "Scorer",
+        "Question",
+        "Evidence"
+      ],
+      [
+        "RelevanceToQuery",
+        "Does it address the request?",
+        "Input and response"
+      ],
+      [
+        "Correctness",
+        "Does it support expected facts?",
+        "Reference expectations"
+      ],
+      [
+        "RetrievalGroundedness",
+        "Does retrieved evidence support it?",
+        "Retrieval spans"
+      ],
+      [
+        "Guidelines",
+        "Does it follow our criteria?",
+        "Inputs, outputs and rules"
+      ]
+    ],
+    "bottom": "Choose a scorer that can see the evidence needed for the judgment.",
+    "notes": "These are selected examples, not the full API inventory. The Correctness row uses the common reference-based workflow; supported configurations can differ. Retrieval scorers require correctly instrumented retrieval information. A final-answer-only check cannot prove the agent used the right tool.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/predefined/"
+    ],
+    "layout_id": 28,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "Guidelines and custom judges",
+    "rows": [
+      [
+        "Guidelines",
+        "Apply shared natural-language criteria and assess pass/fail."
+      ],
+      [
+        "make_judge",
+        "Define task-specific instructions, template inputs and a suitable output type."
+      ],
+      [
+        "The same failure, different detail",
+        "A rule can flag a repeated suggestion. A custom judge can assess how well the agent acknowledges earlier attempts."
+      ]
+    ],
+    "bottom": "A more elaborate judge still needs comparison with human feedback.",
+    "notes": "Uniform Guidelines apply across evaluation rows. Use per-example expectations where the expected behavior changes. make_judge supports inputs, outputs, expectations and trace-based assessment. A numeric scale is useful only when each grade has a clear meaning.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/custom-judges/",
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/guidelines"
+    ],
+    "layout_id": 29,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "A guideline for conversation context",
+    "rows": [],
+    "kind": "code",
+    "code": "from mlflow.genai.scorers import Guidelines\n\ncontext_guideline = Guidelines(\n    name=\"acknowledges_previous_attempts\",\n    guidelines=[\n        \"If the user says earlier attempts failed, acknowledge \"\n        \"those attempts and offer a new approach or escalation.\"\n    ],\n    model=JUDGE_MODEL,\n)",
+    "bottom": "Include the relevant conversation in the evaluation input.",
+    "notes": "JUDGE_MODEL is the configured judge endpoint. A guideline cannot evaluate hidden conversation history that it never receives. Avoid applying this criterion to standalone questions without its conditional wording.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/guidelines"
+    ],
+    "layout_id": 30,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "A custom judge with an explicit rubric",
+    "rows": [],
+    "kind": "code",
+    "code": "from mlflow.genai.judges import make_judge\n\ncontext_judge = make_judge(\n    name=\"context_handling\",\n    instructions=(\n        \"Given {{ inputs }} and {{ outputs }}, score 1–3: \"\n        \"1 = repeats a failed suggestion; \"\n        \"2 = acknowledges failure but gives no useful next step; \"\n        \"3 = acknowledges failure and offers a relevant next step.\"\n    ),\n    feedback_value_type=int, model=JUDGE_MODEL,\n)",
+    "bottom": "Review disagreements against the rubric before using the score for decisions.",
+    "notes": "Teaching adaptation of a conversation-context example. This is an illustrative 1–3 rubric. The integer type alone does not enforce that every model response falls in the requested range. Inspect the returned feedback and validate the judge with reviewed examples.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/custom-judges/"
+    ],
+    "layout_id": 31,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "Our course scorers: useful but incomplete",
+    "rows": [
+      [
+        "word_count_check",
+        "Checks whether the response is under 350 words."
+      ],
+      [
+        "polite_tone and hook_in_post",
+        "Assess tone and whether the response starts with an engaging opening."
+      ],
+      [
+        "The missing quality checks",
+        "A short, polite post can still misrepresent a paper. Add factual support and task-specific expectations."
+      ]
+    ],
+    "bottom": "The mentions_papers keyword check also cannot establish factual correctness.",
+    "notes": "Source: src/arxiv_curator/evaluation.py. Notebook 4.4 runs word_count_check, polite_tone_guideline and hook_in_post_guideline. scope_guideline and mentions_papers exist but are not in that evaluation call. Hook criteria should apply to post-writing tasks, not automatically every response. This is an intentional teaching discussion of the limits of the existing demonstration.",
+    "layout_id": 32,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "Demo: evaluate and inspect a failure",
+    "rows": [],
+    "kind": "code",
+    "code": "results = mlflow.genai.evaluate(\n    predict_fn=predict_fn,\n    data=eval_data,\n    scorers=[\n        word_count_check,\n        polite_tone_guideline,\n        hook_in_post_guideline,\n    ],\n)",
+    "bottom": "Notebooks 4.3–4.4: read the output, scorer rationale and underlying trace together.",
+    "notes": "Excerpt from notebook 4.4. predict_fn takes question and returns the agent output. eval_data maps each question to an inputs dictionary. Start with a passing example and then inspect a failure or a false pass. Explain what the scorer actually checked and what it could not establish.",
+    "layout_id": 33,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "Judge reliability needs human calibration",
+    "rows": [
+      [
+        "A shared rubric",
+        "Give reviewers and the judge the same criteria and relevant context."
+      ],
+      [
+        "Disagreement analysis",
+        "Inspect false passes and false failures. Clarify ambiguous rules and missing evidence."
+      ],
+      [
+        "A fresh check",
+        "Reassess on examples that were not used to refine the judge."
+      ]
+    ],
+    "bottom": "LLM judges provide scalable feedback, not an unquestionable ground truth.",
+    "notes": "Keep advanced statistical judge replacement tests and automated alignment outside the main lecture. The purpose here is practical calibration and avoiding evaluation overfitting.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/"
+    ],
+    "layout_id": 34,
+    "section": "EVALUATION"
+  },
+  {
+    "title": "Tracking and registration",
+    "subtitle": "Prepare an agent for Model Serving",
+    "kind": "divider",
+    "layout_id": "section",
+    "part": "05",
+    "notes": ""
+  },
+  {
+    "title": "Tracking and registration complete the workflow",
+    "rows": [
+      [
+        "Evaluate",
+        "Inspect individual cases and aggregate metrics. Decide whether the version is ready."
+      ],
+      [
+        "Track and log",
+        "Record evaluation metrics in an MLflow run and log the configured agent artifact."
+      ],
+      [
+        "Register",
+        "Create a UC model version and update an alias deliberately. Deploy the chosen version next week."
+      ]
+    ],
+    "bottom": "Logging metrics does not automatically enforce a release gate.",
+    "notes": "Notebook 4.4 evaluates, logs the agent, logs results.metrics, registers the model, and sets latest-model. The notebook does not implement a pass/fail release gate. It also uses placeholder git_sha/run_id values, which should be replaced for production provenance. We do not claim the existing notebook blocks bad versions.",
+    "layout_id": 35,
+    "section": "TRACKING AND REGISTRATION"
+  },
+  {
+    "title": "The agent artifact for next week",
+    "rows": [],
+    "kind": "code",
+    "code": "with mlflow.start_run(run_name=\"arxiv-agent\"):\n    model_info = mlflow.pyfunc.log_model(\n        name=\"agent\", python_model=agent,\n        input_example=test_request, model_config=model_config,\n    )\n    mlflow.log_metrics(results.metrics)\n\nregistered_model = mlflow.register_model(\n    model_uri=model_info.model_uri,\n    name=f\"{cfg.catalog}.{cfg.schema}.arxiv_agent\",\n)",
+    "bottom": "Notebook 4.4 contains the complete registration and alias configuration.",
+    "notes": "Simplified excerpt from notebook 4.4. The full notebook passes env_pack at registration. It logs an initialized ResponsesAgent and does not configure automatic resource-based authentication. The Model Serving demonstration must configure the dedicated service principal credentials and required resource access, including trace access. Do not put credential values in model_config. Apps remains our recommended course application route.",
+    "sources": [
+      "https://docs.databricks.com/aws/en/machine-learning/manage-model-lifecycle/"
+    ],
+    "layout_id": 36,
+    "section": "TRACKING AND REGISTRATION"
+  },
+  {
+    "title": "Production observability",
+    "subtitle": "Evaluate live traffic and prevent regressions",
+    "kind": "divider",
+    "layout_id": "section",
+    "part": "06",
+    "notes": ""
+  },
+  {
+    "title": "System lifecycle starts after deployment",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "The confidence curves are conceptual, not measured performance. Connect them to changing user questions and retrieved content. Deployment starts the production observation period.",
+    "layout_id": 21,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Monitoring vs observability",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "Monitoring detects known symptoms such as latency or error rates. Observability supplies the evidence needed to investigate unexpected behavior. A user report can reveal a problem even when operational indicators look healthy.",
+    "layout_id": 22,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Easy checks can miss a real problem",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "Ask students whether this response deserves a passing score. Politeness and length can pass while the response ignores the previous conversation. These are illustrative results in this example, not benchmark measurements.",
+    "layout_id": 23,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Evaluate the response in context",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "Compare the returning issue, quick question and repeated suggestion. A clarification may be appropriate for a new question and frustrating when the user has already supplied the context. Trace evidence shows whether the system loaded or retrieved that context.",
+    "layout_id": 24,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Observability and evaluation work together",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "Evaluation identifies an unsatisfactory response. Inspect the trace to distinguish missing retrieval, a memory problem, or failure to use available context. Add the observed failure to the evaluation set.",
+    "layout_id": 25,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Tiered evaluation in production",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "The rates and cadence are illustrative. Cheap checks may run in application code or a scheduled job. Current MLflow automatic evaluation supports LLM judges, while custom code-based scorers are for offline evaluation. See https://mlflow.org/docs/latest/genai/eval-monitor/scorers/custom/",
+    "layout_id": 37,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Production failures become regression cases",
+    "rows": [
+      [
+        "Observe",
+        "Combine operational signals with feedback and sampled quality assessments."
+      ],
+      [
+        "Investigate",
+        "Inspect the affected traces and identify the failure mechanism."
+      ],
+      [
+        "Improve and verify",
+        "Add the case to evaluation data, change the agent, and compare versions before release."
+      ]
+    ],
+    "bottom": "Protect trace access and retention throughout the feedback loop.",
+    "notes": "Keep development evaluations and live monitoring connected through a versioned failure taxonomy. Monitor collection gaps as well as application quality. Evaluation samples need coverage of rare but consequential failures.",
+    "layout_id": 38,
+    "section": "PRODUCTION OBSERVABILITY"
+  },
+  {
+    "title": "Homework",
+    "subtitle": "Trace, evaluate and explain",
+    "kind": "divider",
+    "layout_id": "section",
+    "part": "07",
+    "notes": ""
+  },
+  {
+    "title": "Homework: trace, evaluate and explain",
+    "rows": [
+      [
+        "Instrument your agent",
+        "Configure its trace destination. Show a request with meaningful spans and version/session metadata."
+      ],
+      [
+        "Evaluate realistic behavior",
+        "Create a small reviewed dataset. Add a code check and a domain-specific judge with clear expectations."
+      ],
+      [
+        "Investigate a failure",
+        "Attach a sanitized trace example, explain the failure, and add a regression case."
+      ],
+      [
+        "Submit your work",
+        "Open a pull request with the implementation, evaluation findings and intended trace permissions."
+      ]
+    ],
+    "notes": "Use notebooks 4.0–4.4 as the reference. Include at least a normal request, missing-evidence case, unrelated request and follow-up question. Do not commit raw sensitive traces or secrets. Registration is useful preparation for the optional Model Serving route next week. Ask students to explain who can read the traces and why.",
+    "layout_id": 39,
+    "section": "HOMEWORK"
+  },
+  {
+    "title": "Questions?",
+    "rows": [],
+    "kind": "divider",
+    "subtitle": "Next week: deploying the agent",
+    "notes": "Revisit experiment versus run versus trace versus model version. We will show a Model Serving endpoint and continue with Databricks Apps as the recommended course application route.",
+    "layout_id": 40,
+    "section": "HOMEWORK"
+  }
+]

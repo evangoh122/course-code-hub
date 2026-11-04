@@ -10,8 +10,10 @@ dev:
   # Use the serving endpoint supported by batch ai_query and AI Search.
   embedding_endpoint: databricks-gte-large-en
   warehouse_id: 9b96ea2aef8272f6
-  experiment_path: /Shared/arxiv-curator-course
+  experiment_path: /Shared/llmops-arxiv-curator-course
   lakebase_project_id: lb-llmops-dev
+  # Group members authenticate with their own OAuth token and this database role.
+  lakebase_user: grp-teachers-llmops
 
 # Acceptance/Staging environment
 acc:
@@ -22,7 +24,7 @@ acc:
   # Use the serving endpoint supported by batch ai_query and AI Search.
   embedding_endpoint: databricks-gte-large-en
   warehouse_id: 9b96ea2aef8272f6
-  experiment_path: /Shared/arxiv-curator-course
+  experiment_path: /Shared/llmops-arxiv-curator-course
   lakebase_project_id: lb-llmops-dev
 
 # Production environment
@@ -34,7 +36,7 @@ prd:
   # Use the serving endpoint supported by batch ai_query and AI Search.
   embedding_endpoint: databricks-gte-large-en
   warehouse_id: 9b96ea2aef8272f6
-  experiment_path: /Shared/arxiv-curator-course
+  experiment_path: /Shared/llmops-arxiv-curator-course
   lakebase_project_id: lb-llmops-dev
 
 # Model configuration

@@ -9,6 +9,7 @@ from typing import Any
 import psycopg
 from databricks.sdk import WorkspaceClient
 from loguru import logger
+
 from arxiv_curator.config import ProjectConfig
 
 
@@ -32,7 +33,9 @@ class LakebasePgVectorManager:
         lakebase_project_id: str | None = None,
         embedding_model: str | None = None,
         workspace: WorkspaceClient | None = None,
+        database_user: str | None = None,
     ) -> None:
+        self.database_user = database_user
         self.config = config
         self.catalog = config.catalog if config else catalog
         self.schema = config.schema if config else schema
@@ -74,8 +77,9 @@ class LakebasePgVectorManager:
             database = "databricks_postgres"
         credential = postgres_api.generate_database_credential(endpoint=endpoint_name)
         client_id = os.environ.get("DATABRICKS_CLIENT_ID")
-        username = urllib.parse.quote_plus(
-            client_id or workspace.current_user.me().user_name
+        database_user = self.database_user or (self.config.lakebase_user if self.config else None)
+        username = urllib.parse.quote(
+            client_id or database_user or workspace.current_user.me().user_name, safe=""
         )
 
         self._connection_string = (
@@ -90,14 +94,14 @@ class LakebasePgVectorManager:
         return psycopg.connect(self._get_connection_string())
 
     def ensure_extension(self) -> None:
-        """Enable lakebase_vector (installs pgvector with CASCADE).
+        """Enable pgvector for the synced embedding column.
 
         Must run before the Synced Table with a vector column is created: creating a
         synced table does not install extensions.
         """
         with self.connection() as conn:
-            conn.execute("CREATE EXTENSION IF NOT EXISTS lakebase_vector CASCADE")
-        logger.info("lakebase_vector extension ready")
+            conn.execute("CREATE EXTENSION IF NOT EXISTS vector")
+        logger.info("vector extension ready")
 
     def ensure_indexes(self) -> None:
         """Create the vector and full-text indexes on the Synced Table.

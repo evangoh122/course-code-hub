@@ -1,6 +1,91 @@
 # course-code-hub
 Full code for LLMOps with Datarbricks Course
 
+## Lecture 4 materials
+
+- [Lecture slides in PDF](presentations/lecture4.pdf)
+- [Editable PowerPoint with speaker notes](presentations/lecture4.pptx)
+- [Browser presentation with speaker notes](presentation_prep/lecture4/lecture4.html)
+
+Lecture 4 covers MLflow components, workspace and Unity Catalog storage, sensitive
+trace data and permissions, tracing implementation, evaluation, and observability.
+The demos follow notebooks 4.0–4.4. In the browser presentation, press **F** to
+present, use the arrow keys to navigate, and press **N** for notes and sources.
+Keep its CSS, JavaScript, and assets alongside the HTML when downloading it.
+
+## Data pipeline and Genie deployment
+
+`resources/initialize_data.yml` defines a small initialization job and a job-run
+resource. During deployment it creates the schema and `arxiv_papers` Delta table
+if missing, using the column types expected by `DataProcessor`. Existing data is
+preserved. Genie references this run's outcome, so it waits only for table
+initialization, not ingestion, PDF parsing, embeddings, or Lakebase sync.
+
+```bash
+databricks bundle deploy -t dev --profile dbc-e81ca4d2-f6bd
+```
+
+The initialization check runs on each deployment that includes its job-run
+resource, so it also handles a table that has been dropped since the last deploy.
+The data-processing job is defined separately in `resources/process_data.yml`.
+Deploying it does not start ingestion. To deploy and run it independently:
+
+```bash
+databricks bundle deploy -t dev --profile dbc-e81ca4d2-f6bd --select jobs.data-pipeline
+databricks bundle run data-pipeline -t dev --profile dbc-e81ca4d2-f6bd
+```
+
+The job runs `process_data` followed by `sync_lakebase`, each in its own deployment
+script. To sync already processed chunks without downloading or processing again:
+
+```bash
+databricks bundle run data-pipeline -t dev --profile dbc-e81ca4d2-f6bd --only sync_lakebase
+```
+
+For a targeted development deployment of Genie and its initialization dependencies:
+
+```bash
+databricks bundle deploy -t dev --profile dbc-e81ca4d2-f6bd --select genie_spaces.arxiv-curator-space
+```
+
+Notebook 4.0 creates or selects the configured experiment, checks its Unity Catalog
+binding, and then grants the service principal access to the trace tables and views.
+It reads the application ID from the UC secret `databricks_client_id` in the configured
+catalog and schema. Tables receive `SELECT, MODIFY`; views receive `SELECT`.
+
+Notebook 4.4 logs the model without automatic resource-based authentication.
+When deploying the serving endpoint, configure secret-backed `DATABRICKS_CLIENT_ID`
+and `DATABRICKS_CLIENT_SECRET`, the workspace `DATABRICKS_HOST`, and the created
+experiment's `MLFLOW_EXPERIMENT_ID`. These grants do not configure a serving endpoint.
+See [Databricks UC tracing setup](https://docs.databricks.com/aws/en/mlflow3/genai/tracing/trace-unity-catalog).
+
+Notebook test job definitions live in `resources/testing_jobs/`; the lecture
+notebooks remain in `notebooks/`. These jobs run only when explicitly triggered.
+The ingestion notebook test overwrites `arxiv_papers`, so use an isolated test
+schema when running it against existing data.
+
+The `lecture4-tracing-evaluation` testing job runs notebooks 4.0 through 4.4
+sequentially. It has no schedule or deployment-triggered run. Notebook 4.0 grants
+trace permissions; notebook 4.4 evaluates and registers a model version and updates
+its `latest-model` alias. Run it explicitly after the data pipeline has completed:
+
+```bash
+databricks bundle deploy -t dev --profile dbc-e81ca4d2-f6bd --select jobs.lecture4-tracing-evaluation
+databricks bundle run lecture4-tracing-evaluation -t dev --profile dbc-e81ca4d2-f6bd
+```
+
+For user-authenticated Lakebase connections, `lakebase_user` in `project_config.yml`
+can select a group database role. The dev configuration uses `grp-teachers-llmops`:
+group members connect with their own OAuth token and the group's database username.
+Omit the setting to use the individual user's role. Service-principal connections
+continue to use the service principal's application ID.
+
+Run the mocked deployment-notebook tests locally:
+
+```bash
+uv run pytest
+```
+
 ## Lecture 1 materials
 
 - [Lecture notes in HTML](lecture_materials/lecture1.html) — download and open in a browser.

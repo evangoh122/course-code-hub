@@ -18,10 +18,10 @@ project_id = cfg.lakebase_project_id
 # Service principal credentials are Unity Catalog secrets in the project schema
 # (requires READ SECRET on the secrets, schema or catalog).
 os.environ["LAKEBASE_SP_CLIENT_ID"] = dbutils.secrets.get(
-    catalog=cfg.catalog, schema=cfg.schema, key="client_id"
+    catalog=cfg.catalog, schema=cfg.schema, key="databricks_client_id"
 )
 os.environ["LAKEBASE_SP_CLIENT_SECRET"] = dbutils.secrets.get(
-    catalog=cfg.catalog, schema=cfg.schema, key="client_secret"
+    catalog=cfg.catalog, schema=cfg.schema, key="databricks_client_secret"
 )
 os.environ["LAKEBASE_SP_HOST"] = w.config.host
 
@@ -43,12 +43,13 @@ test_messages = [
 ]
 
 memory.save_messages(session_id, test_messages)
-logger.info(f"✓ Saved {len(test_messages)} messages to session: {session_id}")
+logger.info(f"Saved {len(test_messages)} messages to session: {session_id}")
 
 # COMMAND ----------
 
 # Load messages back
 loaded_messages = memory.load_messages(session_id)
+assert loaded_messages == test_messages, "SPN message round-trip failed"
 logger.info(f"Loaded {len(loaded_messages)} messages:")
 for msg in loaded_messages:
     logger.info(f"  {msg['role']}: {msg['content'][:50]}...")

@@ -177,7 +177,7 @@ class SimpleAgent:
         self.tools = {tool.name: tool for tool in tools}
         self.client = OpenAI(
             api_key=w.tokens.create(lifetime_seconds=1200).token_value,
-            base_url=f"{w.config.host.rstrip('/')}/ai-gateway/mlflow/v1",
+            base_url=f"{w.config.host}/ai-gateway/mlflow/v1",
         )
 
     def chat(self, user_message: str, max_iterations: int = 10) -> str:
@@ -247,7 +247,7 @@ logger.info(agent.chat("Find recent papers about transformer attention mechanism
 # The agent discovers the governed UC function as a tool instead of importing
 # or reimplementing the function locally.
 uc_function_url = (
-    f"{w.config.host.rstrip('/')}/api/2.0/mcp/functions/"
+    f"{w.config.host}/api/2.0/mcp/functions/"
     f"{cfg.catalog}/{cfg.schema}/add_numbers"
 )
 uc_function_tools = asyncio.run(create_mcp_tools(w, [uc_function_url]))

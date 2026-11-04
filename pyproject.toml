@@ -50,9 +50,9 @@ include = ["arxiv_curator*"]
 version = { file = "version.txt" }
 
 [tool.pytest.ini_options]
-addopts = "-s --no-header --no-summary"
+addopts = "-ra"
 testpaths = ["tests"]
-pythonpath = ["."]
+pythonpath = ["src"]
 
 [tool.ruff]
 line-length = 100
@@ -81,4 +81,5 @@ environment_version = "5"
 [dependency-groups]
 dev = [
     "databricks-connect~=18.0.0",
+    "pytest>=8.3.4,<9",
 ]

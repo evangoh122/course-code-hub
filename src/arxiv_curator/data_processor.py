@@ -96,7 +96,7 @@ class DataProcessor:
         self,
     ) -> list[dict] | None:
         """
-        Download papers from arxiv and store metadata
+        Download up to 70 papers from arxiv and store metadata
         in arxiv_papers table.
 
         Returns:
@@ -130,9 +130,11 @@ class DataProcessor:
                         "volume_path": f"{self.pdf_dir}/{paper_id}.pdf",
                     }
                 )
-                break
             except Exception:
                 logger.warning(f"Paper {paper_id} was not successfully processed.")
+            if len(records) >= 70:
+                logger.info("Reached the download limit of 70 papers.")
+                break
             # Avoid hitting API rate limits
             time.sleep(3)
 

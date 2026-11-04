@@ -2,7 +2,10 @@ resources:
   genie_spaces:
     arxiv-curator-space:
       title: arxiv-curator-space
-      description: Ask questions about the arXiv papers ingested for the course.
+      # Referencing the run outcome establishes a deployment dependency.
+      description: >-
+        Ask questions about the arXiv papers ingested for the course.
+        Table initialization: ${resources.job_runs.initialize-tables.state.result_state}.
       warehouse_id: "${var.warehouse_id}"
       # Genie validates this strictly: every id is 32 lowercase hex characters, id-keyed
       # lists are sorted by id, and column_configs are sorted by column_name.

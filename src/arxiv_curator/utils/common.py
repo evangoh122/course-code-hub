@@ -1,9 +1,5 @@
-import os
-
-import mlflow
 from databricks.sdk.runtime import dbutils
 from delta.tables import DeltaTable
-from dotenv import load_dotenv
 from pyspark.sql import SparkSession
 
 
@@ -19,18 +15,6 @@ def get_widget(name: str, default: str | None = None) -> str | None:
         return dbutils.widgets.get(name)
     except KeyError:
         return default
-
-
-def set_mlflow_tracking_uri() -> None:
-    """
-    Set the MLflow tracking URI based on the provided profile.
-
-    """
-    if "DATABRICKS_RUNTIME_VERSION" not in os.environ:
-        load_dotenv()
-        profile = os.environ["PROFILE"]
-        mlflow.set_tracking_uri(f"databricks://{profile}")
-        mlflow.set_registry_uri(f"databricks-uc://{profile}")
 
 
 def get_delta_table_version(spark: SparkSession, full_table_name: str) -> str:

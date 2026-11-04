@@ -47,13 +47,13 @@ w = WorkspaceClient()
 # Create OpenAI client for Databricks
 client = OpenAI(
     api_key=w.tokens.create(lifetime_seconds=1200).token_value,
-    base_url=f"{w.config.host.rstrip('/')}/ai-gateway/mlflow/v1"
+    base_url=f"{w.config.host}/ai-gateway/mlflow/v1"
 )
 
 pgvector = LakebasePgVectorManager(config=cfg, workspace=w)
 
-logger.info(f"✓ Connected to workspace: {w.config.host}")
-logger.info(f"✓ Using LLM endpoint: {cfg.llm_endpoint}")
+logger.info(f"Connected to workspace: {w.config.host}")
+logger.info(f"Using LLM endpoint: {cfg.llm_endpoint}")
 
 # COMMAND ----------
 
@@ -256,7 +256,7 @@ class SimpleRAG:
         self.w = WorkspaceClient()
         self.client = OpenAI(
             api_key=self.w.tokens.create(lifetime_seconds=1200).token_value,
-            base_url=f"{self.w.config.host.rstrip('/')}/ai-gateway/mlflow/v1"
+            base_url=f"{self.w.config.host}/ai-gateway/mlflow/v1"
         )
     
     def retrieve(self, query: str, num_results: int = 5) -> list[dict]:
@@ -319,7 +319,7 @@ If the context doesn't contain relevant information, say so. Always cite paper t
 # Create RAG instance
 rag = SimpleRAG(llm_endpoint=cfg.llm_endpoint, vector_store=pgvector)
 
-logger.info("✓ SimpleRAG initialized")
+logger.info("SimpleRAG initialized")
 
 # COMMAND ----------
 

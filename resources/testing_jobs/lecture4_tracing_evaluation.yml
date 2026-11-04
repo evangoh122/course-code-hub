@@ -1,0 +1,46 @@
+resources:
+  jobs:
+    lecture4-tracing-evaluation:
+      name: lecture4-tracing-evaluation
+      budget_policy_id: "${var.usage_policy_id}"
+      max_concurrent_runs: 1
+      parameters:
+        - name: env
+          default: "${bundle.target}"
+        - name: genie_space_id
+          default: "${resources.genie_spaces.arxiv-curator-space.id}"
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "5"
+            dependencies:
+              - ../../dist/*.whl
+      tasks:
+        - task_key: uc_traces_setup
+          environment_key: default
+          notebook_task:
+            notebook_path: ../../notebooks/4.0.uc_traces_setup.py
+        - task_key: tracing_implementation
+          depends_on:
+            - task_key: uc_traces_setup
+          environment_key: default
+          notebook_task:
+            notebook_path: ../../notebooks/4.1.tracing_implementation.py
+        - task_key: custom_agent
+          depends_on:
+            - task_key: tracing_implementation
+          environment_key: default
+          notebook_task:
+            notebook_path: ../../notebooks/4.2.custom_agent.py
+        - task_key: evaluation_theory
+          depends_on:
+            - task_key: custom_agent
+          environment_key: default
+          notebook_task:
+            notebook_path: ../../notebooks/4.3.evaluation_theory.py
+        - task_key: mlflow_log_register
+          depends_on:
+            - task_key: evaluation_theory
+          environment_key: default
+          notebook_task:
+            notebook_path: ../../notebooks/4.4.mlflow_log_register.py

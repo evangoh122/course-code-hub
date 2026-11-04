@@ -1,7 +1,14 @@
 resources:
+  job_runs:
+    initialize-tables:
+      job_id: ${resources.jobs.initialize-data.id}
+      lifecycle:
+        triggers:
+          - on_bundle_deploy: true
+
   jobs:
-    synced-tables:
-      name: arxiv-synced-tables
+    initialize-data:
+      name: arxiv-initialize-data
       budget_policy_id: "${var.usage_policy_id}"
       environments:
         - environment_key: default
@@ -9,11 +16,10 @@ resources:
             environment_version: "5"
             dependencies:
               - ../dist/*.whl
-
       tasks:
-        - task_key: lakebase_synced_tables
+        - task_key: initialize_data
           environment_key: default
           notebook_task:
-            notebook_path: ../notebooks/2.5_synced_tables.py
+            notebook_path: deployment_scripts/initialize_data.py
             base_parameters:
               env: "${bundle.target}"

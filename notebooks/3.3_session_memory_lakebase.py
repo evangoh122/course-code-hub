@@ -68,10 +68,11 @@ default_branch = next(iter(pg_api.list_branches(parent=project.name)))
 endpoint = next(iter(pg_api.list_endpoints(parent=default_branch.name)))
 host = endpoint.status.hosts.host
 
-# Get username (works with user credentials in notebook)
+# Use the configured group role with the current user's OAuth token.
+# Without an override, connect using the individual user's database role.
 user = w.current_user.me()
 pg_credential = pg_api.generate_database_credential(endpoint=endpoint.name)
-username = urllib.parse.quote_plus(user.user_name)
+username = urllib.parse.quote(cfg.lakebase_user or user.user_name, safe="")
 conn_string = (
     f"postgresql://{username}:{pg_credential.token}@{host}:5432/"
     "databricks_postgres?sslmode=require"
@@ -139,6 +140,7 @@ with psycopg.connect(conn_string) as conn:
         (test_session_id,),
     ).fetchall()
 
+    assert [row[0] for row in result] == test_messages, "Session message round-trip failed"
     logger.info(f"Loaded {len(result)} messages:")
     for row in result:
         logger.info(f"  [{row[1]}] {row[0]}")
@@ -159,7 +161,7 @@ with psycopg.connect(conn_string) as conn:
 
 from arxiv_curator.memory import LakebaseMemory
 
-memory = LakebaseMemory(project_id=project_id, workspace=w)
+memory = LakebaseMemory(project_id=project_id, workspace=w, database_user=cfg.lakebase_user)
 memory.ensure_schema()
 
 # COMMAND ----------
@@ -186,6 +188,7 @@ logger.info(f"Saved messages to session: {session_id}")
 
 # Test load
 loaded = memory.load_messages(session_id)
+assert loaded == messages, "LakebaseMemory message round-trip failed"
 logger.info(f"Loaded {len(loaded)} messages:")
 for msg in loaded:
     logger.info(f"  {msg['role']}: {msg['content'][:50]}...")

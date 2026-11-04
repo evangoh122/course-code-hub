@@ -165,6 +165,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "databricks-connect" },
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -200,7 +201,10 @@ requires-dist = [
 provides-extras = ["dev", "ci"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "databricks-connect", specifier = "~=18.0.0" }]
+dev = [
+    { name = "databricks-connect", specifier = "~=18.0.0" },
+    { name = "pytest", specifier = ">=8.3.4,<9" },
+]
 
 [[package]]
 name = "asttokens"

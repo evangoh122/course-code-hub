@@ -40,9 +40,8 @@ variables:
 
 include:
   - resources/process_data.yml
-  - resources/lecture3_tools.yml
-  - resources/ai_search.yml
-  - resources/synced_tables.yml
+  - resources/initialize_data.yml
+  - resources/testing_jobs/*.yml
   - resources/genie_space.yml
 
 sync:
