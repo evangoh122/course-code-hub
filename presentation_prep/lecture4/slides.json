@@ -256,28 +256,37 @@
     "section": "TRACES AND SPANS"
   },
   {
-    "title": "A trace records one execution",
-    "rows": [
-      [
-        "Trace",
-        "The request-level record, including status, duration, identifiers and a collection of spans."
-      ],
-      [
-        "Span",
-        "One operation, with a start/end time, inputs, outputs and attributes."
-      ],
-      [
-        "Parent and child spans",
-        "Nested spans preserve the relationship between the agent, model calls and tools."
-      ]
-    ],
-    "bottom": "A conversation can contain multiple request traces linked by a session ID.",
-    "notes": "A span may represent an LLM call, retrieval or a tool invocation. The trace is the execution record, not a transcript alone. OpenTelemetry provides a common tracing model. Integration and payload details still matter when sending data to another backend.",
+    "layout_id": "trace-anatomy",
+    "title": "Anatomy of a trace",
+    "section": "TRACES AND SPANS",
+    "rows": [],
+    "notes": ""
+  },
+  {
+    "layout_id": "span-types",
+    "title": "Span types for GenAI operations",
+    "section": "TRACES AND SPANS",
+    "rows": [],
+    "notes": "",
     "sources": [
-      "https://mlflow.org/docs/latest/genai/tracing/"
-    ],
-    "layout_id": 11,
-    "section": "TRACES AND SPANS"
+      "https://mlflow.org/docs/latest/genai/concepts/span/"
+    ]
+  },
+  {
+    "layout_id": "tracing-apis",
+    "title": "Using the tracing APIs",
+    "section": "TRACES AND SPANS",
+    "rows": [],
+    "notes": ""
+  },
+  {
+    "layout_id": "basic-tracing",
+    "title": "Code example: basic tracing",
+    "section": "TRACES AND SPANS",
+    "rows": [],
+    "notes": "",
+    "left_code": "import mlflow\n\nmlflow.set_experiment(\n    cfg.experiment_name\n)\n\n@mlflow.trace\ndef add_numbers(x: int, y: int):\n    return x + y\n\nadd_numbers(2, 3)",
+    "right_code": "def add_manually(x: int, y: int):\n    with mlflow.start_span(\n        name=\"add_numbers\"\n    ) as span:\n        span.set_inputs({\"x\": x, \"y\": y})\n        result = x + y\n        span.set_outputs(result)\n        return result\n\nadd_manually(2, 3)"
   },
   {
     "title": "One request through the arXiv agent",
@@ -311,29 +320,6 @@
     "section": "TRACES AND SPANS"
   },
   {
-    "title": "Instrumentation choices",
-    "rows": [
-      [
-        "Automatic instrumentation",
-        "Use the integration for your model or framework to capture supported operations."
-      ],
-      [
-        "@mlflow.trace",
-        "Instrument your own functions and choose meaningful span names and types."
-      ],
-      [
-        "mlflow.start_span",
-        "Control the scope of a span and explicitly record inputs or outputs."
-      ]
-    ],
-    "notes": "Notebook 4.1 introduces decorators and manual spans. OpenTelemetry compatibility does not mean all frameworks record identical attributes or all backends accept every field. Avoid logging credentials in arguments or metadata.",
-    "sources": [
-      "https://mlflow.org/docs/latest/genai/tracing/"
-    ],
-    "layout_id": 14,
-    "section": "TRACES AND SPANS"
-  },
-  {
     "title": "UC trace setup",
     "rows": [],
     "kind": "code",
@@ -347,23 +333,26 @@
     "section": "TRACES AND SPANS"
   },
   {
+    "layout_id": "trace-tables",
+    "title": "UC traces: four tables and two views",
+    "section": "TRACES AND SPANS",
+    "rows": [],
+    "notes": "Redrawn from the supplied Catalog Explorer screenshot. These are the six trace objects in the course arxiv schema with the llmops prefix. Other application tables are omitted. Tables store OpenTelemetry data; views expose an MLflow-friendly representation. They can support SQL analysis and monitoring later."
+  },
+  {
     "title": "Permissions and deployment checks",
     "rows": [
       [
-        "Human reader and application writer",
-        "Give each identity the privileges needed for its task. Check inherited access as well as direct grants."
+        "Agent runtime identity",
+        "The agent acts as its configured identity, for example a service principal (SPN)."
       ],
       [
-        "Course setup",
-        "Notebook 4.0 grants the service principal SELECT and MODIFY on trace tables, and SELECT on views."
-      ],
-      [
-        "A real write and read",
-        "Generate a trace with the application identity, then verify that an intended reader can inspect it."
+        "Trace permissions",
+        "SELECT and MODIFY on trace tables; SELECT on views; USE CATALOG and USE SCHEMA on their parents."
       ]
     ],
-    "bottom": "Experiment access alone does not grant access to UC trace payloads.",
-    "notes": "The course notebook assumes necessary parent USE CATALOG and USE SCHEMA grants already exist. Table-level SELECT, MODIFY and view SELECT grants do not grant these parent privileges. Use a dedicated trace destination where possible and review the notebook prefix-based object selection. Check SQL warehouse access for readers. Validate both allowed access and denied access for an unrelated user. No permissions are changed by these slides.",
+    "bottom": "The agent’s runtime identity needs these grants to write and read UC traces.",
+    "notes": "Permissions apply to the identity under which the agent runs, for example a service principal (SPN). In this setup the identity needs SELECT and MODIFY on trace tables, SELECT on trace views, and USE CATALOG and USE SCHEMA on the containing catalog and schema. Reading and searching also requires access to the SQL warehouse. Verify writes as the runtime identity and reads as the intended reader.",
     "sources": [
       "https://docs.databricks.com/aws/en/mlflow3/genai/tracing/trace-unity-catalog"
     ],
@@ -371,12 +360,23 @@
     "section": "TRACES AND SPANS"
   },
   {
+    "layout_id": "trace-search",
+    "title": "Searching UC traces uses a SQL warehouse",
+    "section": "TRACES AND SPANS",
+    "rows": [],
+    "notes": "Set the environment variable in the Python process before searching or retrieving traces from a UC-backed experiment. cfg.warehouse_id is the warehouse ID, not its HTTP path. The caller needs CAN USE on the SQL warehouse and appropriate UC permissions. The course notebooks already set this variable.",
+    "code": "import os\nimport mlflow\n\nos.environ[\"MLFLOW_TRACING_SQL_WAREHOUSE_ID\"] = (\n    cfg.warehouse_id\n)\n\ntraces = mlflow.search_traces(\n    experiment_ids=[experiment.experiment_id],\n    max_results=20,\n)",
+    "sources": [
+      "https://docs.databricks.com/gcp/en/mlflow3/genai/tracing/observe-with-traces/query-via-sdk"
+    ]
+  },
+  {
     "title": "A parent span and two child spans",
     "rows": [],
     "kind": "code",
-    "code": "@mlflow.trace(span_type=SpanType.CHAIN)\ndef process_query(user_query: str) -> str:\n    results = search_database(user_query)\n    prompt = f\"Question: {user_query}\\nResults: {results}\"\n    return call_llm(prompt)\n\n# search_database uses @mlflow.trace(span_type=SpanType.TOOL)\n# call_llm uses @mlflow.trace(span_type=SpanType.LLM)",
-    "bottom": "Notebook 4.1 starts with simulated operations so the span structure is easy to inspect.",
-    "notes": "Adapted from notebook 4.1. Imports and decorated child functions are defined earlier in the notebook. This excerpt illustrates nesting, not a complete application. A simulated LLM function is not a real model call.",
+    "code": "@mlflow.trace(span_type=SpanType.TOOL)\ndef search_database(query):\n    return [\"Example paper\"]\n\n@mlflow.trace(span_type=SpanType.LLM)\ndef call_llm(prompt):\n    return \"Simulated answer\"\n\n@mlflow.trace(span_type=SpanType.CHAIN)  # PARENT\ndef process_query(query):\n    results = search_database(query)  # CHILD 1\n    return call_llm(f\"{query}: {results}\")  # CHILD 2\n\nprocess_query(\"Find papers on agents\")",
+    "bottom": "",
+    "notes": "Imports assumed: import mlflow; from mlflow.entities import SpanType. search_database and call_llm return simulated results. Calling process_query creates an active span through its decorator. The decorated functions it calls create child spans while that span is active; nesting comes from execution context, not from the CHAIN span type alone.",
     "layout_id": 17,
     "section": "TRACES AND SPANS"
   },
@@ -391,25 +391,11 @@
     "section": "TRACES AND SPANS"
   },
   {
-    "title": "Demo: inspect the agent execution",
-    "rows": [
-      [
-        "4.0 and 4.1",
-        "Verify the UC destination, generate a simple trace, then inspect nested spans and metadata."
-      ],
-      [
-        "4.2: the real agent",
-        "Ask for papers, then ask a follow-up using the same session ID."
-      ],
-      [
-        "Investigation",
-        "Find the memory load, tool call and final response. Explain which evidence supports the answer."
-      ]
-    ],
-    "bottom": "ResponsesAgent packages prediction behavior. Tracing shows what that behavior did.",
-    "notes": "Use notebooks/4.0.uc_traces_setup.py, 4.1.tracing_implementation.py and 4.2.custom_agent.py. Show src/arxiv_curator/agent.py only where it clarifies a span or prediction method. Keep tools and memory implementation brief because lecture 3 covered them. The user should be able to explain a trace, not memorize every agent method.",
-    "layout_id": 19,
-    "section": "TRACES AND SPANS"
+    "layout_id": "agent-recap",
+    "title": "Our agent: arXiv papers → LinkedIn posts",
+    "section": "OUR COURSE AGENT",
+    "rows": [],
+    "notes": "Course architecture adapted from presentation_prep/kickoff/assets/course-architecture-clean.png and the course implementation. The scheduled pipeline prepares paper content and metadata; the agent retrieves evidence and generates a LinkedIn post on request. It does not automatically publish to LinkedIn. Databricks Apps is the recommended application route; logging and registering prepares Model Serving."
   },
   {
     "title": "Evaluation",
@@ -420,6 +406,58 @@
     "layout_id": 20,
     "part": "04",
     "section": "EVALUATION AND OBSERVABILITY"
+  },
+  {
+    "title": "Observability and evaluation work together",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "Evaluation identifies an unsatisfactory response. Inspect the trace to distinguish missing retrieval, a memory problem, or failure to use available context. Add the observed failure to the evaluation set.",
+    "layout_id": 25,
+    "section": "EVALUATION"
+  },
+  {
+    "layout_id": "output-correct",
+    "title": "How do we know the output is correct?",
+    "section": "EVALUATION",
+    "rows": [],
+    "notes": "Comparison redrawn from the user-supplied reference. Examples of traditional ML measures are task dependent. Early signals are proxies, not proof of quality.",
+    "table": [
+      [
+        "Dimension",
+        "Traditional ML",
+        "LLM-based applications"
+      ],
+      [
+        "What “good” means",
+        "Defined target and measurable prediction error",
+        "Task-specific criteria; several valid answers"
+      ],
+      [
+        "Quality signals",
+        "Precision, recall, F1; RMSE, MAE, R²",
+        "Correctness, relevance, groundedness, task success"
+      ],
+      [
+        "Evaluation methods",
+        "Compare predictions with known outcomes",
+        "Code checks, human review and LLM judges"
+      ],
+      [
+        "Ground truth",
+        "Labels may arrive hours, days or weeks later",
+        "References may be delayed, costly or unavailable"
+      ],
+      [
+        "Early signals",
+        "Estimated performance; input and prediction drift",
+        "Judge scores, user feedback, shifts in requests"
+      ],
+      [
+        "Diagnosing failures",
+        "Slice analysis, feature drift, SHAP attributions",
+        "Trace prompts, retrieval, tool calls and responses"
+      ]
+    ]
   },
   {
     "title": "Evaluation data starts with expected behavior",
@@ -438,9 +476,24 @@
       ]
     ],
     "bottom": "For arXiv: paper evidence, topic relevance, follow-up context and honest uncertainty.",
-    "notes": "For the exercise, consider starting with roughly 10–20 high-quality examples as a practical exercise, not a universal statistical requirement. Include absent evidence, unrelated requests and follow-up questions. A file with only questions is a starting point but does not encode per-example expectations. Keep a separate held-out set for comparing changes.",
+    "notes": "Use the arXiv-to-LinkedIn task as the running example. Evaluate whether a requested post answers the requested topic, cites real retrieved papers and preserves their claims.",
     "layout_id": 26,
     "section": "EVALUATION"
+  },
+  {
+    "title": "Easy checks can miss a real problem",
+    "rows": [],
+    "kind": "diagram",
+    "notes": "Ask students whether this response deserves a passing score. Politeness and length can pass while the response ignores the previous conversation. These are illustrative results in this example, not benchmark measurements.",
+    "layout_id": 23,
+    "section": "EVALUATION"
+  },
+  {
+    "layout_id": "eval-start",
+    "title": "Getting started with evals",
+    "section": "EVALUATION",
+    "rows": [],
+    "notes": "Meme extracted as its original image asset from the user-provided observability PDF. The steps are redrawn as HTML. Start with a small, carefully reviewed set; 10–20 is an illustrative starting point rather than a statistical sample-size guarantee."
   },
   {
     "title": "Metrics define what; scorers define how",
@@ -475,6 +528,17 @@
     ],
     "layout_id": 27,
     "section": "EVALUATION"
+  },
+  {
+    "title": "MLflow LLM scorers: simplicity and control",
+    "layout_id": "scorer-approaches",
+    "section": "EVALUATION",
+    "rows": [],
+    "notes": "Redrawn from the user-provided comparison. Simplicity and control are qualitative teaching comparisons, not measured ratings. Predefined scorers construct prompts from built-in templates. Guidelines evaluate natural-language criteria. Custom judges created with make_judge use template variables such as inputs, outputs and expectations. Judge alignment is an optional explicit workflow using human feedback, not something automatically performed for every custom judge.",
+    "sources": [
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/index.html",
+      "https://mlflow.org/docs/latest/genai/eval-monitor/scorers/llm-judge/custom-judges/"
+    ]
   },
   {
     "title": "MLflow scorers: choosing the evidence",
@@ -588,16 +652,6 @@
     "section": "EVALUATION"
   },
   {
-    "title": "Demo: evaluate and inspect a failure",
-    "rows": [],
-    "kind": "code",
-    "code": "results = mlflow.genai.evaluate(\n    predict_fn=predict_fn,\n    data=eval_data,\n    scorers=[\n        word_count_check,\n        polite_tone_guideline,\n        hook_in_post_guideline,\n    ],\n)",
-    "bottom": "Notebooks 4.3–4.4: read the output, scorer rationale and underlying trace together.",
-    "notes": "Excerpt from notebook 4.4. predict_fn takes question and returns the agent output. eval_data maps each question to an inputs dictionary. Start with a passing example and then inspect a failure or a false pass. Explain what the scorer actually checked and what it could not establish.",
-    "layout_id": 33,
-    "section": "EVALUATION"
-  },
-  {
     "title": "Judge reliability needs human calibration",
     "rows": [
       [
@@ -620,6 +674,33 @@
     ],
     "layout_id": 34,
     "section": "EVALUATION"
+  },
+  {
+    "layout_id": "calibration-pitfall",
+    "title": "Calibration to one person is not enough",
+    "section": "EVALUATION",
+    "rows": [],
+    "notes": "A single expert can define a useful rubric, but matching their labels alone is not evidence that an LLM judge can replace a human reviewer for the wider task. Discuss the risk of learning individual preferences, and validate on held-out examples with multiple qualified reviewers."
+  },
+  {
+    "layout_id": "alt-test",
+    "title": "Is an LLM judge good enough to replace a human?",
+    "section": "EVALUATION",
+    "rows": [],
+    "notes": "Alt-Test compares each held-out human and the LLM against the same remaining annotators. The procedure includes a cost-benefit adjustment and false discovery rate (FDR) control. Its winning rate is the proportion of human comparisons won after hypothesis testing, not raw example-level accuracy. A winning rate of at least 0.5 supports replacement only under the tested task and settings. The paper discusses at least three annotators and 50–100 examples; sample requirements vary.",
+    "sources": [
+      "https://aclanthology.org/2025.acl-long.782/"
+    ]
+  },
+  {
+    "layout_id": "eval-resource",
+    "title": "Recommended resource on evals",
+    "section": "EVALUATION",
+    "rows": [],
+    "notes": "Book cover supplied by the user. Authors and title verified with the publisher.",
+    "sources": [
+      "https://www.oreilly.com/library/view/evals-for-ai/9798341660717/"
+    ]
   },
   {
     "title": "Tracking and registration",
@@ -662,83 +743,6 @@
     ],
     "layout_id": 36,
     "section": "TRACKING AND REGISTRATION"
-  },
-  {
-    "title": "Production observability",
-    "subtitle": "Evaluate live traffic and prevent regressions",
-    "kind": "divider",
-    "layout_id": "section",
-    "part": "06",
-    "notes": ""
-  },
-  {
-    "title": "System lifecycle starts after deployment",
-    "rows": [],
-    "kind": "diagram",
-    "notes": "The confidence curves are conceptual, not measured performance. Connect them to changing user questions and retrieved content. Deployment starts the production observation period.",
-    "layout_id": 21,
-    "section": "PRODUCTION OBSERVABILITY"
-  },
-  {
-    "title": "Monitoring vs observability",
-    "rows": [],
-    "kind": "diagram",
-    "notes": "Monitoring detects known symptoms such as latency or error rates. Observability supplies the evidence needed to investigate unexpected behavior. A user report can reveal a problem even when operational indicators look healthy.",
-    "layout_id": 22,
-    "section": "PRODUCTION OBSERVABILITY"
-  },
-  {
-    "title": "Easy checks can miss a real problem",
-    "rows": [],
-    "kind": "diagram",
-    "notes": "Ask students whether this response deserves a passing score. Politeness and length can pass while the response ignores the previous conversation. These are illustrative results in this example, not benchmark measurements.",
-    "layout_id": 23,
-    "section": "PRODUCTION OBSERVABILITY"
-  },
-  {
-    "title": "Evaluate the response in context",
-    "rows": [],
-    "kind": "diagram",
-    "notes": "Compare the returning issue, quick question and repeated suggestion. A clarification may be appropriate for a new question and frustrating when the user has already supplied the context. Trace evidence shows whether the system loaded or retrieved that context.",
-    "layout_id": 24,
-    "section": "PRODUCTION OBSERVABILITY"
-  },
-  {
-    "title": "Observability and evaluation work together",
-    "rows": [],
-    "kind": "diagram",
-    "notes": "Evaluation identifies an unsatisfactory response. Inspect the trace to distinguish missing retrieval, a memory problem, or failure to use available context. Add the observed failure to the evaluation set.",
-    "layout_id": 25,
-    "section": "PRODUCTION OBSERVABILITY"
-  },
-  {
-    "title": "Tiered evaluation in production",
-    "rows": [],
-    "kind": "diagram",
-    "notes": "The rates and cadence are illustrative. Cheap checks may run in application code or a scheduled job. Current MLflow automatic evaluation supports LLM judges, while custom code-based scorers are for offline evaluation. See https://mlflow.org/docs/latest/genai/eval-monitor/scorers/custom/",
-    "layout_id": 37,
-    "section": "PRODUCTION OBSERVABILITY"
-  },
-  {
-    "title": "Production failures become regression cases",
-    "rows": [
-      [
-        "Observe",
-        "Combine operational signals with feedback and sampled quality assessments."
-      ],
-      [
-        "Investigate",
-        "Inspect the affected traces and identify the failure mechanism."
-      ],
-      [
-        "Improve and verify",
-        "Add the case to evaluation data, change the agent, and compare versions before release."
-      ]
-    ],
-    "bottom": "Protect trace access and retention throughout the feedback loop.",
-    "notes": "Keep development evaluations and live monitoring connected through a versioned failure taxonomy. Monitor collection gaps as well as application quality. Evaluation samples need coverage of rare but consequential failures.",
-    "layout_id": 38,
-    "section": "PRODUCTION OBSERVABILITY"
   },
   {
     "title": "Homework",
