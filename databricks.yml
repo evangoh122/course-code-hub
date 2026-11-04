@@ -48,6 +48,7 @@ sync:
   include:
     - eval_inputs.txt
     - project_config.yml
+    - prompts/*.txt
 
 targets:
   dev:

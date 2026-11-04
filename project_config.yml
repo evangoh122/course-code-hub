@@ -1,4 +1,5 @@
 # Project Configuration for LLMOps Course
+system_prompt_file: prompts/linkedin_content.txt
 usage_policy_id: "aab31ed1-3d45-30f4-bd70-ec76d652513c"
 
 # Development environment

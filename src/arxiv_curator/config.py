@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import yaml
@@ -60,6 +61,10 @@ class ProjectConfig(BaseModel):
         env_config = config_data[env]
         if "usage_policy_id" in config_data:
             env_config["usage_policy_id"] = config_data["usage_policy_id"]
+
+        if "system_prompt_file" in config_data:
+            prompt_path = Path(config_path).parent / config_data["system_prompt_file"]
+            env_config["system_prompt"] = prompt_path.read_text(encoding="utf-8").strip()
 
         return cls(**env_config)
 
